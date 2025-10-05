@@ -2,11 +2,6 @@ package finix.social.finixapp.adapter;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
-import com.google.android.exoplayer2.SimpleExoPlayer;
-import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.ui.StyledPlayerView;
-
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
@@ -14,15 +9,18 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.widget.NestedScrollView;
+import androidx.appcompat.widget.AppCompatButton;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.os.Build;
 import android.os.Handler;
 import android.text.Editable;
 import android.text.Html;
@@ -39,8 +37,10 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.LinearInterpolator;
 import android.view.animation.ScaleAnimation;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -60,8 +60,11 @@ import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.RequestConfiguration;
 import com.google.android.gms.ads.VideoController;
 import com.google.android.gms.ads.VideoOptions;
+import com.google.android.gms.ads.formats.UnifiedNativeAd;
 import com.google.android.gms.ads.nativead.MediaView;
 import com.google.android.gms.ads.nativead.NativeAd;
 import com.google.android.gms.ads.nativead.NativeAdOptions;
@@ -75,19 +78,25 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import github.ankushsachdeva.emojicon.EmojiconEditText;
 import github.ankushsachdeva.emojicon.EmojiconTextView;
+import finix.social.finixapp.AppActivity;
 import finix.social.finixapp.GroupActivity;
 import finix.social.finixapp.HashtagsActivity;
+import finix.social.finixapp.LoginActivity;
+import finix.social.finixapp.MainActivity;
 import finix.social.finixapp.MediaViewerActivity;
 import finix.social.finixapp.ProfileActivity;
 import finix.social.finixapp.R;
 import finix.social.finixapp.ReactionsActivity;
+import finix.social.finixapp.RegisterActivity;
 
 import finix.social.finixapp.VideoViewActivity;
 import finix.social.finixapp.ViewItemActivity;
@@ -96,6 +105,7 @@ import finix.social.finixapp.app.App;
 import finix.social.finixapp.constants.Constants;
 import finix.social.finixapp.model.Comment;
 import finix.social.finixapp.model.Item;
+import finix.social.finixapp.model.MediaItem;
 import finix.social.finixapp.util.Api;
 import finix.social.finixapp.util.CustomRequest;
 import finix.social.finixapp.util.TagClick;
@@ -107,9 +117,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
     private long replyToUserId = 0;
 
-    private SimpleExoPlayer exoPlayer;
-    private int playingPosition = -1;
-
     private int pageId = 0;
 
     private List<Item> items = new ArrayList<>();
@@ -119,7 +126,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     TagSelectingTextview mTagSelectingTextview;
 
     public static int hashTagHyperLinkDisabled = 0;
-
 
     public static final String HASHTAGS_COLOR = "#5BCFF2";
 
@@ -138,9 +144,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-
-        public StyledPlayerView playerView;
-        public ImageButton btnMute;
 
         public CircularImageView mItemAuthorPhoto, mItemAuthorIcon, mItemFeelingIcon;
         public TextView mItemAuthor, mItemFeelingTitle;
@@ -177,7 +180,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
         public Button mSpotlightMoreBtn;
         public RecyclerView mSpotlightRecyclerView;
-
 
 
         public LinearLayout mCardRepostContainer;
@@ -240,9 +242,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
                 mItemAuthorPhoto = (CircularImageView) v.findViewById(R.id.itemAuthorPhoto);
                 mItemAuthorIcon = (CircularImageView) v.findViewById(R.id.itemAuthorIcon);
-                playerView = v.findViewById(R.id.playerView);
-                btnMute = v.findViewById(R.id.btnMute);
-
 
                 mItemFeelingIcon = (CircularImageView) v.findViewById(R.id.itemFeelingIcon);
 
@@ -272,10 +271,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
                 mImageProgressBar = (ProgressBar) v.findViewById(R.id.image_progress_bar);
                 mVideoProgressBar = (ProgressBar) v.findViewById(R.id.video_progress_bar);
-
-                //mute button
-                playerView = v.findViewById(R.id.playerView);
-                btnMute = v.findViewById(R.id.btnMute);
 
                 mItemDescription = (EmojiconTextView) v.findViewById(R.id.itemDescription);
 
@@ -476,7 +471,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
                     onItemMenuButtonClickListener.onItemClick(v, p,  ITEM_ACTIONS_LINK_NUMBER, position);
                 }
             });
-
 
             holder.mCloseTooltipButton.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -928,41 +922,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
         }
 
         if (p.getVideoUrl() != null && p.getVideoUrl().length() != 0) {
-            holder.mVideoLayout.setVisibility(View.VISIBLE);
-            holder.playerView.setVisibility(View.VISIBLE);
-            holder.btnMute.setVisibility(View.VISIBLE);
-
-            holder.mVideoImg.setVisibility(View.GONE);
-            holder.mItemPlayVideo.setVisibility(View.GONE);
-            holder.mVideoProgressBar.setVisibility(View.GONE);
-
-// ExoPlayer setup
-            if (exoPlayer == null) {
-                exoPlayer = new SimpleExoPlayer.Builder(context).build();
-            }
-            holder.playerView.setPlayer(exoPlayer);
-            exoPlayer.setMediaItem(MediaItem.fromUri(p.getVideoUrl()));
-            exoPlayer.prepare();
-            exoPlayer.setPlayWhenReady(true);
-            exoPlayer.setVolume(0f); // Start muted
-            holder.btnMute.setImageResource(R.drawable.btn_mute);
-
-            holder.btnMute.setOnClickListener(v -> {
-                if (exoPlayer.getVolume() == 0f) {
-                    exoPlayer.setVolume(1f);
-                    holder.btnMute.setImageResource(R.drawable.btn_mute);
-                } else {
-                    exoPlayer.setVolume(0f);
-                    holder.btnMute.setImageResource(R.drawable.btn_mute);
-                }
-            });
-
-// Fullscreen on tap
-            holder.playerView.setOnClickListener(v -> {
-                Intent i = new Intent(context, VideoViewActivity.class);
-                i.putExtra("videoUrl", p.getVideoUrl());
-                context.startActivity(i);
-            });
 
             holder.mVideoLayout.setVisibility(View.VISIBLE);
             holder.mVideoImg.setVisibility(View.VISIBLE);
@@ -1039,8 +998,8 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
             @Override
             public void onClick(View v) {
 
-                ArrayList<finix.social.finixapp.model.MediaItem> images = new ArrayList<>();
-                images.add(new finix.social.finixapp.model.MediaItem("", "", p.getRePostImgUrl(), "", 0));
+                ArrayList<MediaItem> images = new ArrayList<>();
+                images.add(new MediaItem("", "", p.getImgUrl(), "", 0));
 
                 Intent i = new Intent(context, MediaViewerActivity.class);
                 i.putExtra("position", 0);
@@ -1058,7 +1017,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
                 if (p.getVideoUrl().length() != 0) {
 
-
                     watchVideo(p.getVideoUrl());
 
                 } else {
@@ -1068,10 +1026,20 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
             }
         });
 
-        holder.mItemPlayVideo.setOnClickListener(v -> {
-            holder.mVideoImg.setVisibility(View.GONE);
-            holder.mItemPlayVideo.setVisibility(View.GONE);
+        holder.mItemPlayVideo.setOnClickListener(new View.OnClickListener() {
 
+            @Override
+            public void onClick(View v) {
+
+                if (p.getVideoUrl().length() != 0) {
+
+                    watchVideo(p.getVideoUrl());
+
+                } else {
+
+                    watchYoutubeVideo(p.getYouTubeVideoCode());
+                }
+            }
         });
 
         if (p.getPostType() == POST_TYPE_DEFAULT) {
@@ -1817,8 +1785,8 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
                     @Override
                     public void onClick(View v) {
 
-                        ArrayList<finix.social.finixapp.model.MediaItem> images = new ArrayList<>();
-                        images.add(new finix.social.finixapp.model.MediaItem("", "", p.getRePostImgUrl(), "", 0));
+                        ArrayList<MediaItem> images = new ArrayList<>();
+                        images.add(new MediaItem("", "", p.getRePostImgUrl(), "", 0));
 
                         Intent i = new Intent(context, MediaViewerActivity.class);
                         i.putExtra("position", 0);
@@ -1959,15 +1927,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     private void onItemMenuButtonClick(final View view, final Item post, final int position){
 
         onItemMenuButtonClickListener.onItemClick(view, post, ITEM_ACTIONS_MENU, position);
-
-    }
-
-    private void releasePlayer() {
-        if (exoPlayer != null) {
-            exoPlayer.release();
-            exoPlayer = null;
-            playingPosition = -1;
-        }
     }
 
     private void animateIcon(ImageView icon) {
@@ -2120,7 +2079,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
             return;
         }
-
 
         final ArrayList<Comment> itemsList;
         final CommentsListAdapter itemsAdapter;
@@ -2486,12 +2444,5 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
         final Item p = items.get(position);
 
         return p.getViewType();
-    }
-    @Override
-    public void onViewRecycled(@NonNull ViewHolder holder) {
-        if (holder.playerView != null) {
-            holder.playerView.setPlayer(null);
-        }
-        super.onViewRecycled(holder);
     }
 }
