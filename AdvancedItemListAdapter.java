@@ -963,10 +963,10 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
 // ExoPlayer setup
             if (p.getVideoUrl() != null && p.getVideoUrl().length() != 0) {
+                // ... ALL video setup code goes here ...
                 holder.mVideoLayout.setVisibility(View.VISIBLE);
                 holder.playerView.setVisibility(View.VISIBLE);
                 holder.btnMute.setVisibility(View.VISIBLE);
-
                 holder.mVideoImg.setVisibility(View.GONE);
                 holder.mItemPlayVideo.setVisibility(View.GONE);
                 holder.mVideoProgressBar.setVisibility(View.GONE);
