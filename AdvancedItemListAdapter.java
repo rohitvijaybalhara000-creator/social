@@ -162,7 +162,7 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
         public void pauseVideo() {
             if (exoPlayer != null) exoPlayer.setPlayWhenReady(false);
         }
-       
+
 
         public StyledPlayerView playerView;
         public ImageButton btnMute;
@@ -1003,7 +1003,7 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
                     context.startActivity(i);
                 });
 
-                // ... (your preview image logic, progress bar, etc., unchanged)
+                // ... preview image logic, progress bar, etc. ...
             } else {
                 holder.releasePlayer();
                 if (holder.playerView != null)
