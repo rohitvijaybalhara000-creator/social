@@ -1011,12 +1011,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
                 holder.mVideoLayout.setVisibility(View.GONE);
             }
 
-// Fullscreen on tap
-            holder.playerView.setOnClickListener(v -> {
-                Intent i = new Intent(context, VideoViewActivity.class);
-                i.putExtra("videoUrl", p.getVideoUrl());
-                context.startActivity(i);
-            });
 
             holder.mVideoLayout.setVisibility(View.VISIBLE);
             holder.mVideoImg.setVisibility(View.VISIBLE);
