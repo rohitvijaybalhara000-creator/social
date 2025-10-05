@@ -963,10 +963,10 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
 // ExoPlayer setup
             if (p.getVideoUrl() != null && p.getVideoUrl().length() != 0) {
-                // ... ALL video setup code goes here ...
                 holder.mVideoLayout.setVisibility(View.VISIBLE);
                 holder.playerView.setVisibility(View.VISIBLE);
                 holder.btnMute.setVisibility(View.VISIBLE);
+
                 holder.mVideoImg.setVisibility(View.GONE);
                 holder.mItemPlayVideo.setVisibility(View.GONE);
                 holder.mVideoProgressBar.setVisibility(View.GONE);
@@ -1004,7 +1004,41 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
                 });
 
                 // ... preview image logic, progress bar, etc. ...
+                holder.mVideoLayout.setVisibility(View.VISIBLE);
+                holder.mVideoImg.setVisibility(View.VISIBLE);
+                holder.mVideoProgressBar.setVisibility(View.VISIBLE);
+
+                if (p.getPreviewVideoImgUrl().length() != 0) {
+                    final ImageView imageView = holder.mVideoImg;
+                    final ProgressBar progressView = holder.mVideoProgressBar;
+                    final ImageView playButtonView = holder.mItemPlayVideo;
+
+                    Picasso.with(context)
+                            .load(p.getPreviewVideoImgUrl())
+                            .into(holder.mVideoImg, new Callback() {
+                                @Override
+                                public void onSuccess() {
+                                    progressView.setVisibility(View.GONE);
+                                    playButtonView.setVisibility(View.VISIBLE);
+                                }
+                                @Override
+                                public void onError() {
+                                    progressView.setVisibility(View.GONE);
+                                    playButtonView.setVisibility(View.GONE);
+                                    imageView.setImageResource(R.drawable.ic_video_preview);
+                                }
+                            });
+                } else {
+                    holder.mVideoProgressBar.setVisibility(View.GONE);
+                    holder.mVideoImg.setVisibility(View.VISIBLE);
+                    holder.mItemPlayVideo.setVisibility(View.GONE);
+                    holder.mVideoImg.setImageResource(R.drawable.ic_video_preview);
+                }
+
+            } else if (p.getYouTubeVideoUrl() != null && p.getYouTubeVideoUrl().length() != 0) {
+                // ... your YouTube block ...
             } else {
+                // This is the proper place to release/hide if no video
                 holder.releasePlayer();
                 if (holder.playerView != null)
                     holder.playerView.setPlayer(null);
