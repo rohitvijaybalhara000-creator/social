@@ -1,0 +1,187 @@
+package finix.social.finixapp;
+
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.ProgressBar;
+import android.widget.Toast;
+
+import androidx.appcompat.widget.Toolbar;
+
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.PlaybackException;
+import com.google.android.exoplayer2.ui.StyledPlayerView;
+
+import finix.social.finixapp.R;
+import finix.social.finixapp.common.ActivityBase;
+
+public class VideoViewActivity extends ActivityBase {
+
+    Toolbar toolbar;
+
+    private StyledPlayerView mVideoView;
+    private ProgressBar mProgressBar;
+    private ImageButton mCloseButton;
+    private ImageButton mMuteButton;
+    private ExoPlayer mPlayer;
+
+    String videoUrl;
+    long playbackPosition = 0;
+    boolean playWhenReady = true;
+    boolean isMuted = true;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_video_view);
+
+        // Hide the action bar for immersive experience
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+
+        // Immersive mode for full-screen video
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        );
+
+        Intent i = getIntent();
+        videoUrl = i.getStringExtra("videoUrl");
+        playbackPosition = 0;
+
+        mCloseButton = findViewById(R.id.close_button);
+        mMuteButton = findViewById(R.id.mute_button);
+
+        mCloseButton.setOnClickListener(view -> {
+            releasePlayer();
+            finish();
+        });
+
+        mProgressBar = findViewById(R.id.progressBar);
+        mProgressBar.setVisibility(View.VISIBLE);
+
+        mVideoView = findViewById(R.id.video_view);
+
+        initializePlayer();
+
+        mMuteButton.setOnClickListener(v -> toggleMute());
+
+        mVideoView.setUseController(true);
+        mVideoView.requestFocus();
+        mVideoView.setPlayer(mPlayer);
+        mVideoView.setControllerAutoShow(true);
+        mVideoView.setShowNextButton(false);
+        mVideoView.setShowPreviousButton(false);
+        mVideoView.setShowFastForwardButton(false);
+        mVideoView.setShowRewindButton(false);
+        mVideoView.setShowMultiWindowTimeBar(false);
+        mVideoView.setShowBuffering(StyledPlayerView.SHOW_BUFFERING_NEVER);
+
+        mPlayer.addListener(new Player.Listener() {
+            @Override
+            public void onPlaybackStateChanged(@Player.State int state) {
+                if (state == Player.STATE_BUFFERING) {
+                    mProgressBar.setVisibility(View.VISIBLE);
+                } else {
+                    mProgressBar.setVisibility(View.GONE);
+                }
+            }
+            @Override
+            public void onPlayerError(PlaybackException error) {
+                Toast.makeText(getApplicationContext(), getString(R.string.msg_play_video_error), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void initializePlayer() {
+        if (mPlayer == null) {
+            mPlayer = new ExoPlayer.Builder(this).build();
+        }
+        MediaItem mediaItem = MediaItem.fromUri(Uri.parse(videoUrl));
+        mPlayer.setMediaItem(mediaItem);
+        mPlayer.prepare();
+        mPlayer.seekTo(playbackPosition);
+        mPlayer.setPlayWhenReady(playWhenReady);
+        mPlayer.setVolume(isMuted ? 0f : 1f);
+        updateMuteIcon();
+    }
+
+    private void toggleMute() {
+        isMuted = !isMuted;
+        if (mPlayer != null) {
+            mPlayer.setVolume(isMuted ? 0f : 1f);
+        }
+        updateMuteIcon();
+    }
+
+    private void updateMuteIcon() {
+        if (isMuted) {
+            mMuteButton.setImageResource(R.drawable.btn_mute); // Use your mute icon drawable
+        } else {
+            mMuteButton.setImageResource(R.drawable.btn_mute); // Use your unmute icon drawable
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mPlayer != null) {
+            playbackPosition = mPlayer.getCurrentPosition();
+            playWhenReady = mPlayer.getPlayWhenReady();
+            mPlayer.setPlayWhenReady(false);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mPlayer != null) {
+            mPlayer.seekTo(playbackPosition);
+            mPlayer.setPlayWhenReady(playWhenReady);
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        releasePlayer();
+        super.onBackPressed();
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home: {
+                releasePlayer();
+                finish();
+                return true;
+            }
+            default: {
+                return super.onOptionsItemSelected(item);
+            }
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        releasePlayer();
+        super.onDestroy();
+    }
+
+    private void releasePlayer() {
+        if (mPlayer != null) {
+            playbackPosition = mPlayer.getCurrentPosition();
+            playWhenReady = mPlayer.getPlayWhenReady();
+            mPlayer.setPlayWhenReady(false);
+            mPlayer.stop();
+            mPlayer.release();
+            mPlayer = null;
+        }
+    }
+}
