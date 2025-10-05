@@ -961,90 +961,77 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
             holder.mItemPlayVideo.setVisibility(View.GONE);
             holder.mVideoProgressBar.setVisibility(View.GONE);
 
-// ExoPlayer setup
-            if (p.getVideoUrl() != null && p.getVideoUrl().length() != 0) {
-                holder.mVideoLayout.setVisibility(View.VISIBLE);
-                holder.playerView.setVisibility(View.VISIBLE);
-                holder.btnMute.setVisibility(View.VISIBLE);
+            boolean shouldPlay = (position == playingPosition);
+            holder.bindVideo(p.getVideoUrl(), shouldPlay);
 
-                holder.mVideoImg.setVisibility(View.GONE);
-                holder.mItemPlayVideo.setVisibility(View.GONE);
-                holder.mVideoProgressBar.setVisibility(View.GONE);
-
-                boolean shouldPlay = (position == playingPosition);
-                holder.bindVideo(p.getVideoUrl(), shouldPlay);
-
-                if (shouldPlay) {
-                    if (playingHolder != null && playingHolder != holder) {
-                        playingHolder.pauseVideo();
-                    }
-                    playingHolder = holder;
-                } else {
-                    holder.pauseVideo();
+            if (shouldPlay) {
+                if (playingHolder != null && playingHolder != holder) {
+                    playingHolder.pauseVideo();
                 }
-
-                holder.btnMute.setImageResource(R.drawable.btn_mute);
-
-                holder.btnMute.setOnClickListener(v -> {
-                    if (holder.exoPlayer != null) {
-                        if (holder.exoPlayer.getVolume() == 0f) {
-                            holder.exoPlayer.setVolume(1f);
-                            holder.btnMute.setImageResource(R.drawable.btn_mute);
-                        } else {
-                            holder.exoPlayer.setVolume(0f);
-                            holder.btnMute.setImageResource(R.drawable.btn_mute);
-                        }
-                    }
-                });
-
-                holder.playerView.setOnClickListener(v -> {
-                    Intent i = new Intent(context, VideoViewActivity.class);
-                    i.putExtra("videoUrl", p.getVideoUrl());
-                    context.startActivity(i);
-                });
-
-                // ... preview image logic, progress bar, etc. ...
-                holder.mVideoLayout.setVisibility(View.VISIBLE);
-                holder.mVideoImg.setVisibility(View.VISIBLE);
-                holder.mVideoProgressBar.setVisibility(View.VISIBLE);
-
-                if (p.getPreviewVideoImgUrl().length() != 0) {
-                    final ImageView imageView = holder.mVideoImg;
-                    final ProgressBar progressView = holder.mVideoProgressBar;
-                    final ImageView playButtonView = holder.mItemPlayVideo;
-
-                    Picasso.with(context)
-                            .load(p.getPreviewVideoImgUrl())
-                            .into(holder.mVideoImg, new Callback() {
-                                @Override
-                                public void onSuccess() {
-                                    progressView.setVisibility(View.GONE);
-                                    playButtonView.setVisibility(View.VISIBLE);
-                                }
-                                @Override
-                                public void onError() {
-                                    progressView.setVisibility(View.GONE);
-                                    playButtonView.setVisibility(View.GONE);
-                                    imageView.setImageResource(R.drawable.ic_video_preview);
-                                }
-                            });
-                } else {
-                    holder.mVideoProgressBar.setVisibility(View.GONE);
-                    holder.mVideoImg.setVisibility(View.VISIBLE);
-                    holder.mItemPlayVideo.setVisibility(View.GONE);
-                    holder.mVideoImg.setImageResource(R.drawable.ic_video_preview);
-                }
-
-            } else if (p.getYouTubeVideoUrl() != null && p.getYouTubeVideoUrl().length() != 0) {
-                // ... your YouTube block ...
+                playingHolder = holder;
             } else {
-                // This is the proper place to release/hide if no video
-                holder.releasePlayer();
-                if (holder.playerView != null)
-                    holder.playerView.setPlayer(null);
-                holder.mVideoLayout.setVisibility(View.GONE);
+                holder.pauseVideo();
             }
 
+            holder.btnMute.setImageResource(R.drawable.btn_mute);
+
+            holder.btnMute.setOnClickListener(v -> {
+                if (holder.exoPlayer != null) {
+                    if (holder.exoPlayer.getVolume() == 0f) {
+                        holder.exoPlayer.setVolume(1f);
+                        holder.btnMute.setImageResource(R.drawable.btn_mute);
+                    } else {
+                        holder.exoPlayer.setVolume(0f);
+                        holder.btnMute.setImageResource(R.drawable.btn_mute);
+                    }
+                }
+            });
+
+            holder.playerView.setOnClickListener(v -> {
+                Intent i = new Intent(context, VideoViewActivity.class);
+                i.putExtra("videoUrl", p.getVideoUrl());
+                context.startActivity(i);
+            });
+
+            holder.mVideoLayout.setVisibility(View.VISIBLE);
+            holder.mVideoImg.setVisibility(View.VISIBLE);
+            holder.mVideoProgressBar.setVisibility(View.VISIBLE);
+
+            if (p.getPreviewVideoImgUrl().length() != 0) {
+                final ImageView imageView = holder.mVideoImg;
+                final ProgressBar progressView = holder.mVideoProgressBar;
+                final ImageView playButtonView = holder.mItemPlayVideo;
+
+                Picasso.with(context)
+                        .load(p.getPreviewVideoImgUrl())
+                        .into(holder.mVideoImg, new Callback() {
+                            @Override
+                            public void onSuccess() {
+                                progressView.setVisibility(View.GONE);
+                                playButtonView.setVisibility(View.VISIBLE);
+                            }
+                            @Override
+                            public void onError() {
+                                progressView.setVisibility(View.GONE);
+                                playButtonView.setVisibility(View.GONE);
+                                imageView.setImageResource(R.drawable.ic_video_preview);
+                            }
+                        });
+            } else {
+                holder.mVideoProgressBar.setVisibility(View.GONE);
+                holder.mVideoImg.setVisibility(View.VISIBLE);
+                holder.mItemPlayVideo.setVisibility(View.GONE);
+                holder.mVideoImg.setImageResource(R.drawable.ic_video_preview);
+            }
+
+        } else if (p.getYouTubeVideoUrl() != null && p.getYouTubeVideoUrl().length() != 0) {
+            // ... your YouTube logic ...
+        } else {
+            holder.releasePlayer();
+            if (holder.playerView != null)
+                holder.playerView.setPlayer(null);
+            holder.mVideoLayout.setVisibility(View.GONE);
+        }
 
             holder.mVideoLayout.setVisibility(View.VISIBLE);
             holder.mVideoImg.setVisibility(View.VISIBLE);
