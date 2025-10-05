@@ -120,9 +120,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
     public static int hashTagHyperLinkDisabled = 0;
 
-    public SimpleExoPlayer exoPlayer; // new field for each ViewHolder
-
-
     public static final String HASHTAGS_COLOR = "#5BCFF2";
 
     ImageLoader imageLoader = App.getInstance().getImageLoader();
@@ -142,6 +139,14 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     public class ViewHolder extends RecyclerView.ViewHolder {
         public SimpleExoPlayer exoPlayer;
 
+        public void releasePlayer() {
+            if (exoPlayer != null) {
+                exoPlayer.release();
+                exoPlayer = null;
+            }
+            if (playerView != null) playerView.setPlayer(null);
+        }
+
         public void bindVideo(String videoUrl, boolean play) {
             releasePlayer();
             exoPlayer = new SimpleExoPlayer.Builder(itemView.getContext()).build();
@@ -157,13 +162,7 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
         public void pauseVideo() {
             if (exoPlayer != null) exoPlayer.setPlayWhenReady(false);
         }
-        public void releasePlayer() {
-            if (exoPlayer != null) {
-                exoPlayer.release();
-                exoPlayer = null;
-            }
-            if (playerView != null) playerView.setPlayer(null);
-        }
+       
 
         public StyledPlayerView playerView;
         public ImageButton btnMute;
@@ -2017,13 +2016,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
     }
 
-    private void releasePlayer() {
-        if (exoPlayer != null) {
-            exoPlayer.release();
-            exoPlayer = null;
-            playingPosition = -1;
-        }
-    }
 
     private void animateIcon(ImageView icon) {
 
@@ -2544,9 +2536,7 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     }
     @Override
     public void onViewRecycled(@NonNull ViewHolder holder) {
-        if (holder.playerView != null) {
-            holder.playerView.setPlayer(null);
-        }
+        holder.releasePlayer();
         super.onViewRecycled(holder);
     }
 }
