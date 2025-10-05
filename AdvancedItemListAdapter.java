@@ -107,8 +107,8 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
     private long replyToUserId = 0;
 
-    private int playingPosition = -1; // Only one video plays at a time
-    private ViewHolder playingHolder = null; // To keep reference to currently playing holder
+    private SimpleExoPlayer exoPlayer;
+    private int playingPosition = -1;
 
     private int pageId = 0;
 
@@ -119,6 +119,7 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     TagSelectingTextview mTagSelectingTextview;
 
     public static int hashTagHyperLinkDisabled = 0;
+
 
     public static final String HASHTAGS_COLOR = "#5BCFF2";
 
@@ -137,32 +138,6 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        public SimpleExoPlayer exoPlayer;
-
-        public void releasePlayer() {
-            if (exoPlayer != null) {
-                exoPlayer.release();
-                exoPlayer = null;
-            }
-            if (playerView != null) playerView.setPlayer(null);
-        }
-
-        public void bindVideo(String videoUrl, boolean play) {
-            releasePlayer();
-            exoPlayer = new SimpleExoPlayer.Builder(itemView.getContext()).build();
-            playerView.setPlayer(exoPlayer);
-            exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl));
-            exoPlayer.prepare();
-            exoPlayer.setVolume(0f); // Start muted
-            exoPlayer.setPlayWhenReady(play);
-        }
-        public void playVideo() {
-            if (exoPlayer != null) exoPlayer.setPlayWhenReady(true);
-        }
-        public void pauseVideo() {
-            if (exoPlayer != null) exoPlayer.setPlayWhenReady(false);
-        }
-
 
         public StyledPlayerView playerView;
         public ImageButton btnMute;
@@ -961,77 +936,33 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
             holder.mItemPlayVideo.setVisibility(View.GONE);
             holder.mVideoProgressBar.setVisibility(View.GONE);
 
-            boolean shouldPlay = (position == playingPosition);
-            holder.bindVideo(p.getVideoUrl(), shouldPlay);
-
-            if (shouldPlay) {
-                if (playingHolder != null && playingHolder != holder) {
-                    playingHolder.pauseVideo();
-                }
-                playingHolder = holder;
-            } else {
-                holder.pauseVideo();
+// ExoPlayer setup
+            if (exoPlayer == null) {
+                exoPlayer = new SimpleExoPlayer.Builder(context).build();
             }
-
+            holder.playerView.setPlayer(exoPlayer);
+            exoPlayer.setMediaItem(MediaItem.fromUri(p.getVideoUrl()));
+            exoPlayer.prepare();
+            exoPlayer.setPlayWhenReady(true);
+            exoPlayer.setVolume(0f); // Start muted
             holder.btnMute.setImageResource(R.drawable.btn_mute);
 
             holder.btnMute.setOnClickListener(v -> {
-                if (holder.exoPlayer != null) {
-                    if (holder.exoPlayer.getVolume() == 0f) {
-                        holder.exoPlayer.setVolume(1f);
-                        holder.btnMute.setImageResource(R.drawable.btn_mute);
-                    } else {
-                        holder.exoPlayer.setVolume(0f);
-                        holder.btnMute.setImageResource(R.drawable.btn_mute);
-                    }
+                if (exoPlayer.getVolume() == 0f) {
+                    exoPlayer.setVolume(1f);
+                    holder.btnMute.setImageResource(R.drawable.btn_mute);
+                } else {
+                    exoPlayer.setVolume(0f);
+                    holder.btnMute.setImageResource(R.drawable.btn_mute);
                 }
             });
 
+// Fullscreen on tap
             holder.playerView.setOnClickListener(v -> {
                 Intent i = new Intent(context, VideoViewActivity.class);
                 i.putExtra("videoUrl", p.getVideoUrl());
                 context.startActivity(i);
             });
-
-            holder.mVideoLayout.setVisibility(View.VISIBLE);
-            holder.mVideoImg.setVisibility(View.VISIBLE);
-            holder.mVideoProgressBar.setVisibility(View.VISIBLE);
-
-            if (p.getPreviewVideoImgUrl().length() != 0) {
-                final ImageView imageView = holder.mVideoImg;
-                final ProgressBar progressView = holder.mVideoProgressBar;
-                final ImageView playButtonView = holder.mItemPlayVideo;
-
-                Picasso.with(context)
-                        .load(p.getPreviewVideoImgUrl())
-                        .into(holder.mVideoImg, new Callback() {
-                            @Override
-                            public void onSuccess() {
-                                progressView.setVisibility(View.GONE);
-                                playButtonView.setVisibility(View.VISIBLE);
-                            }
-                            @Override
-                            public void onError() {
-                                progressView.setVisibility(View.GONE);
-                                playButtonView.setVisibility(View.GONE);
-                                imageView.setImageResource(R.drawable.ic_video_preview);
-                            }
-                        });
-            } else {
-                holder.mVideoProgressBar.setVisibility(View.GONE);
-                holder.mVideoImg.setVisibility(View.VISIBLE);
-                holder.mItemPlayVideo.setVisibility(View.GONE);
-                holder.mVideoImg.setImageResource(R.drawable.ic_video_preview);
-            }
-
-        } else if (p.getYouTubeVideoUrl() != null && p.getYouTubeVideoUrl().length() != 0) {
-            // ... your YouTube logic ...
-        } else {
-            holder.releasePlayer();
-            if (holder.playerView != null)
-                holder.playerView.setPlayer(null);
-            holder.mVideoLayout.setVisibility(View.GONE);
-        }
 
             holder.mVideoLayout.setVisibility(View.VISIBLE);
             holder.mVideoImg.setVisibility(View.VISIBLE);
@@ -2031,6 +1962,13 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
     }
 
+    private void releasePlayer() {
+        if (exoPlayer != null) {
+            exoPlayer.release();
+            exoPlayer = null;
+            playingPosition = -1;
+        }
+    }
 
     private void animateIcon(ImageView icon) {
 
@@ -2551,7 +2489,9 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     }
     @Override
     public void onViewRecycled(@NonNull ViewHolder holder) {
-        holder.releasePlayer();
+        if (holder.playerView != null) {
+            holder.playerView.setPlayer(null);
+        }
         super.onViewRecycled(holder);
     }
 }
