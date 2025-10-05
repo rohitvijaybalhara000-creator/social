@@ -107,8 +107,8 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
     private long replyToUserId = 0;
 
-    private SimpleExoPlayer exoPlayer;
-    private int playingPosition = -1;
+    private int playingPosition = -1; // Only one video plays at a time
+    private ViewHolder playingHolder = null; // To keep reference to currently playing holder
 
     private int pageId = 0;
 
@@ -119,6 +119,8 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     TagSelectingTextview mTagSelectingTextview;
 
     public static int hashTagHyperLinkDisabled = 0;
+
+    public SimpleExoPlayer exoPlayer; // new field for each ViewHolder
 
 
     public static final String HASHTAGS_COLOR = "#5BCFF2";
@@ -138,6 +140,30 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
+        public SimpleExoPlayer exoPlayer;
+
+        public void bindVideo(String videoUrl, boolean play) {
+            releasePlayer();
+            exoPlayer = new SimpleExoPlayer.Builder(itemView.getContext()).build();
+            playerView.setPlayer(exoPlayer);
+            exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl));
+            exoPlayer.prepare();
+            exoPlayer.setVolume(0f); // Start muted
+            exoPlayer.setPlayWhenReady(play);
+        }
+        public void playVideo() {
+            if (exoPlayer != null) exoPlayer.setPlayWhenReady(true);
+        }
+        public void pauseVideo() {
+            if (exoPlayer != null) exoPlayer.setPlayWhenReady(false);
+        }
+        public void releasePlayer() {
+            if (exoPlayer != null) {
+                exoPlayer.release();
+                exoPlayer = null;
+            }
+            if (playerView != null) playerView.setPlayer(null);
+        }
 
         public StyledPlayerView playerView;
         public ImageButton btnMute;
@@ -937,25 +963,54 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
             holder.mVideoProgressBar.setVisibility(View.GONE);
 
 // ExoPlayer setup
-            if (exoPlayer == null) {
-                exoPlayer = new SimpleExoPlayer.Builder(context).build();
-            }
-            holder.playerView.setPlayer(exoPlayer);
-            exoPlayer.setMediaItem(MediaItem.fromUri(p.getVideoUrl()));
-            exoPlayer.prepare();
-            exoPlayer.setPlayWhenReady(true);
-            exoPlayer.setVolume(0f); // Start muted
-            holder.btnMute.setImageResource(R.drawable.btn_mute);
+            if (p.getVideoUrl() != null && p.getVideoUrl().length() != 0) {
+                holder.mVideoLayout.setVisibility(View.VISIBLE);
+                holder.playerView.setVisibility(View.VISIBLE);
+                holder.btnMute.setVisibility(View.VISIBLE);
 
-            holder.btnMute.setOnClickListener(v -> {
-                if (exoPlayer.getVolume() == 0f) {
-                    exoPlayer.setVolume(1f);
-                    holder.btnMute.setImageResource(R.drawable.btn_mute);
+                holder.mVideoImg.setVisibility(View.GONE);
+                holder.mItemPlayVideo.setVisibility(View.GONE);
+                holder.mVideoProgressBar.setVisibility(View.GONE);
+
+                boolean shouldPlay = (position == playingPosition);
+                holder.bindVideo(p.getVideoUrl(), shouldPlay);
+
+                if (shouldPlay) {
+                    if (playingHolder != null && playingHolder != holder) {
+                        playingHolder.pauseVideo();
+                    }
+                    playingHolder = holder;
                 } else {
-                    exoPlayer.setVolume(0f);
-                    holder.btnMute.setImageResource(R.drawable.btn_mute);
+                    holder.pauseVideo();
                 }
-            });
+
+                holder.btnMute.setImageResource(R.drawable.btn_mute);
+
+                holder.btnMute.setOnClickListener(v -> {
+                    if (holder.exoPlayer != null) {
+                        if (holder.exoPlayer.getVolume() == 0f) {
+                            holder.exoPlayer.setVolume(1f);
+                            holder.btnMute.setImageResource(R.drawable.btn_mute);
+                        } else {
+                            holder.exoPlayer.setVolume(0f);
+                            holder.btnMute.setImageResource(R.drawable.btn_mute);
+                        }
+                    }
+                });
+
+                holder.playerView.setOnClickListener(v -> {
+                    Intent i = new Intent(context, VideoViewActivity.class);
+                    i.putExtra("videoUrl", p.getVideoUrl());
+                    context.startActivity(i);
+                });
+
+                // ... (your preview image logic, progress bar, etc., unchanged)
+            } else {
+                holder.releasePlayer();
+                if (holder.playerView != null)
+                    holder.playerView.setPlayer(null);
+                holder.mVideoLayout.setVisibility(View.GONE);
+            }
 
 // Fullscreen on tap
             holder.playerView.setOnClickListener(v -> {
