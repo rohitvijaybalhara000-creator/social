@@ -2,6 +2,8 @@ package finix.social.finixapp.adapter;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.view.GestureDetector;
+import android.view.GestureDetector.SimpleOnGestureListener;
 import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
@@ -145,6 +147,7 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 
+        public ImageView mHeartOverlay;
         public CircularImageView mItemAuthorPhoto, mItemAuthorIcon, mItemFeelingIcon;
         public TextView mItemAuthor, mItemFeelingTitle;
         public ImageView mItemAuthorOnlineIcon, mItemPlayVideo;
@@ -268,6 +271,7 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
 
                 mVideoImg = (ImageView) v.findViewById(R.id.video_image);
                 mItemPlayVideo = (ImageView) v.findViewById(R.id.video_play_image);
+                mHeartOverlay = (ImageView) v.findViewById(R.id.heart_overlay);
 
                 mImageProgressBar = (ProgressBar) v.findViewById(R.id.image_progress_bar);
                 mVideoProgressBar = (ProgressBar) v.findViewById(R.id.video_progress_bar);
@@ -469,6 +473,31 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
                 public void onClick(View v) {
 
                     onItemMenuButtonClickListener.onItemClick(v, p,  ITEM_ACTIONS_LINK_NUMBER, position);
+                }
+            });
+
+            // Inside onBindItem(ViewHolder holder, final int position):
+            GestureDetector gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+                @Override
+                public boolean onDoubleTap(MotionEvent e) {
+                    // Trigger like logic
+                    if (App.getInstance().getId() != 0) {
+                        Item p = items.get(position);
+                        if (!p.isMyLike()) {
+                            p.setMyLike(true);
+                            p.setLikesCount(p.getLikesCount() + 1);
+                            notifyItemChanged(position);
+                            like(p, position, 0); // 0 can be replaced by selected reaction
+                        }
+                        // Optionally show a quick heart animation here
+                    }
+                    return true;
+                }
+            });
+            holder.mItemImg.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    return gestureDetector.onTouchEvent(event);
                 }
             });
 
@@ -1995,6 +2024,23 @@ public class AdvancedItemListAdapter extends RecyclerView.Adapter<AdvancedItemLi
         }
 
         return location;
+    }
+
+    private void showHeartAnimation(final ImageView heartOverlay) {
+        heartOverlay.setVisibility(View.VISIBLE);
+        heartOverlay.setScaleX(0.1f);
+        heartOverlay.setScaleY(0.1f);
+        heartOverlay.setAlpha(1f);
+        heartOverlay.animate()
+                .scaleX(1.5f)
+                .scaleY(1.5f)
+                .setDuration(200)
+                .withEndAction(() -> heartOverlay.animate()
+                        .alpha(0f)
+                        .setDuration(300)
+                        .withEndAction(() -> heartOverlay.setVisibility(View.GONE))
+                        .start())
+                .start();
     }
 
     private void like(final Item p, final int position, final int reaction) {
